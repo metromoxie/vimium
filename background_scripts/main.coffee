@@ -603,3 +603,16 @@ chrome.windows.getAll { populate: true }, (windows) ->
       createScrollPositionHandler = ->
         (response) -> updateScrollPosition(tab, response.scrollX, response.scrollY) if response?
       chrome.tabs.sendRequest(tab.id, { name: "getScrollPosition" }, createScrollPositionHandler())
+
+chrome.browserAction.onClicked.addListener (tab) ->
+  chrome.tabs.executeScript(null, { file: "lib/utils.js" })
+  chrome.tabs.executeScript(null, { file: "lib/keyboard_utils.js" })
+  chrome.tabs.executeScript(null, { file: "lib/dom_utils.js" })
+  chrome.tabs.executeScript(null, { file: "lib/handler_stack.js" })
+  chrome.tabs.executeScript(null, { file: "lib/clipboard.js" })
+  chrome.tabs.executeScript(null, { file: "content_scripts/link_hints.js" })
+  chrome.tabs.executeScript(null, { file: "content_scripts/vomnibar.js" })
+  chrome.tabs.executeScript(null, { file: "content_scripts/scroller.js" })
+  chrome.tabs.executeScript(null, { file: "content_scripts/marks.js" })
+  chrome.tabs.executeScript(null, { file: "content_scripts/vimium_frontend.js" })
+  chrome.tabs.insertCSS(null, { file: "content_scripts/vimium.css" })
