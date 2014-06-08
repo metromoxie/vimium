@@ -164,6 +164,7 @@ window.addEventListener "focus", ->
 # Initialization tasks that must wait for the document to be ready.
 #
 initializeOnDomReady = ->
+  console.log('OnDomReady!')
   registerFrameIfSizeAvailable(window.top == window.self)
 
   enterInsertModeIfElementIsFocused() if isEnabledForUrl
@@ -995,16 +996,21 @@ Tween =
       state.onUpdate(value)
 
 initializePreDomReady()
-window.addEventListener("DOMContentLoaded", initializeOnDomReady)
-
-window.onbeforeunload = ->
-  chrome.extension.sendRequest(
-    handler: "updateScrollPosition"
-    scrollX: window.scrollX
-    scrollY: window.scrollY)
 
 root = exports ? window
 root.settings = settings
 root.HUD = HUD
 root.handlerStack = handlerStack
 root.frameId = frameId
+window.root = root;
+
+if (document.readyState == 'complete')
+  initializeOnDomReady()
+else
+  window.addEventListener("DOMContentLoaded", initializeOnDomReady)
+
+window.onbeforeunload = ->
+  chrome.extension.sendRequest(
+    handler: "updateScrollPosition"
+    scrollX: window.scrollX
+    scrollY: window.scrollY)

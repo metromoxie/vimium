@@ -276,7 +276,8 @@ alphabetHints =
   # may be of different lengths.
   #
   hintStrings: (linkCount) ->
-    linkHintCharacters = settings.get("linkHintCharacters")
+    #linkHintCharacters = settings.get("linkHintCharacters")
+    linkHintCharacters = "sadfjklewcmpgh"
     # Determine how many digits the link hints will require in the worst case. Usually we do not need
     # all of these digits for every link single hint, so we can show shorter hints for a few of the links.
     digitsNeeded = Math.ceil(@logXOfBase(linkCount, linkHintCharacters.length))
