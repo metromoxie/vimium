@@ -15,24 +15,6 @@ framesForTab = {}
 # the string.
 namedKeyRegex = /^(<(?:[amc]-.|(?:[amc]-)?[a-z0-9]{2,5})>)(.*)$/
 
-# Event handlers
-selectionChangedHandlers = []
-tabLoadedHandlers = {} # tabId -> function()
-
-completionSources =
-  bookmarks: new BookmarkCompleter()
-  history: new HistoryCompleter()
-  domains: new DomainCompleter()
-  tabs: new TabCompleter()
-
-completers =
-  omni: new MultiCompleter([
-    completionSources.bookmarks,
-    completionSources.history,
-    completionSources.domains])
-  bookmarks: new MultiCompleter([completionSources.bookmarks])
-  tabs: new MultiCompleter([completionSources.tabs])
-
 chrome.commands.onCommand.addListener (command) ->
   chrome.extension.onConnect.addListener((port, name) ->
     senderTabId = if port.sender.tab then port.sender.tab.id else null
