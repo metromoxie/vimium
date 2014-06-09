@@ -614,4 +614,6 @@ chrome.commands.onCommand.addListener (command) ->
 
   chrome.windows.getAll { populate: true }, windowsGetAll
 
-  chrome.tabs.executeScript({ code: "root.LinkHints.init(); root.LinkHints.activateMode(); console.log('activated!');" });
+  mode = if command == 'activate-link-hints-new-tab' then 'activateModeToOpenInNewTab' else 'activateMode'
+  console.log('mode = ' + mode)
+  chrome.tabs.executeScript({ code: "root.LinkHints.init(); root.LinkHints." + mode + "(); console.log('activated!');" })
