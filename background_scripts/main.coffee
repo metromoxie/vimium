@@ -33,7 +33,7 @@ completers =
   bookmarks: new MultiCompleter([completionSources.bookmarks])
   tabs: new MultiCompleter([completionSources.tabs])
 
-chrome.browserAction.onClicked.addListener (tab) ->
+chrome.commands.onCommand.addListener (command) ->
   chrome.extension.onConnect.addListener((port, name) ->
     senderTabId = if port.sender.tab then port.sender.tab.id else null
     # If this is a tab we've been waiting to open, execute any "tab loaded" handlers, e.g. to restore

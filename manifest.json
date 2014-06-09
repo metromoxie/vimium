@@ -24,8 +24,12 @@
     "clipboardRead",
     "activeTab"
   ],
-  "browser_action": {
-    "default_icon": "icons/browser_action_disabled.png",
-    "default_popup_old": "pages/popup.html"
+  "commands": {
+    "activate-link-hints": {
+      "suggested_key": {
+        "default": "Ctrl+Period"
+      },
+     "description": "Activate link hints"
+    }
   }
 }
