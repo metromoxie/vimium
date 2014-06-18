@@ -19,21 +19,6 @@ isEnabledForUrl = true
 currentCompletionKeys = null
 validFirstKeys = null
 
-# The types in <input type="..."> that we consider for focusInput command. Right now this is recalculated in
-# each content script. Alternatively we could calculate it once in the background page and use a request to
-# fetch it each time.
-# Should we include the HTML5 date pickers here?
-
-# The corresponding XPath for such elements.
-textInputXPath = (->
-  textInputTypes = ["text", "search", "email", "url", "number", "password"]
-  inputElements = ["input[" +
-    "(" + textInputTypes.map((type) -> '@type="' + type + '"').join(" or ") + "or not(@type))" +
-    " and not(@disabled or @readonly)]",
-    "textarea", "*[@contenteditable='' or translate(@contenteditable, 'TRUE', 'true')='true']"]
-  DomUtils.makeXPath(inputElements)
-)()
-
 #
 # settings provides a browser-global localStorage-backed dict. get() and set() are synchronous, but load()
 # must be called beforehand to ensure get() will return up-to-date values.
@@ -266,61 +251,6 @@ extend window,
       chrome.extension.sendRequest { handler: "copyToClipboard", data: url }
 
     HUD.showForDuration("Yanked URL", 1000)
-
-  focusInput: (count) ->
-    # Focus the first input element on the page, and create overlays to highlight all the input elements, with
-    # the currently-focused element highlighted specially. Tabbing will shift focus to the next input element.
-    # Pressing any other key will remove the overlays and the special tab behavior.
-    resultSet = DomUtils.evaluateXPath(textInputXPath, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE)
-    visibleInputs =
-      for i in [0...resultSet.snapshotLength] by 1
-        element = resultSet.snapshotItem(i)
-        rect = DomUtils.getVisibleClientRect(element)
-        continue if rect == null
-        { element: element, rect: rect }
-
-    return if visibleInputs.length == 0
-
-    selectedInputIndex = Math.min(count - 1, visibleInputs.length - 1)
-
-    visibleInputs[selectedInputIndex].element.focus()
-
-    return if visibleInputs.length == 1
-
-    hints = for tuple in visibleInputs
-      hint = document.createElement("div")
-      hint.className = "vimiumReset internalVimiumInputHint vimiumInputHint"
-
-      # minus 1 for the border
-      hint.style.left = (tuple.rect.left - 1) + window.scrollX + "px"
-      hint.style.top = (tuple.rect.top - 1) + window.scrollY  + "px"
-      hint.style.width = tuple.rect.width + "px"
-      hint.style.height = tuple.rect.height + "px"
-
-      hint
-
-    hints[selectedInputIndex].classList.add 'internalVimiumSelectedInputHint'
-
-    hintContainingDiv = DomUtils.addElementList(hints,
-      { id: "vimiumInputMarkerContainer", className: "vimiumReset" })
-
-    handlerStack.push keydown: (event) ->
-      if event.keyCode == KeyboardUtils.keyCodes.tab
-        hints[selectedInputIndex].classList.remove 'internalVimiumSelectedInputHint'
-        if event.shiftKey
-          if --selectedInputIndex == -1
-            selectedInputIndex = hints.length - 1
-        else
-          if ++selectedInputIndex == hints.length
-            selectedInputIndex = 0
-        hints[selectedInputIndex].classList.add 'internalVimiumSelectedInputHint'
-        visibleInputs[selectedInputIndex].element.focus()
-      else unless event.keyCode == KeyboardUtils.keyCodes.shiftKey
-        DomUtils.removeElement hintContainingDiv
-        @remove()
-        return true
-
-      false
 
 #
 # Sends everything except i & ESC to the handler in background_page. i & ESC are special because they control
