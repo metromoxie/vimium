@@ -149,7 +149,6 @@ window.addEventListener "focus", ->
 # Initialization tasks that must wait for the document to be ready.
 #
 initializeOnDomReady = ->
-  console.log('OnDomReady!')
   registerFrameIfSizeAvailable(window.top == window.self)
 
   enterInsertModeIfElementIsFocused() if isEnabledForUrl
