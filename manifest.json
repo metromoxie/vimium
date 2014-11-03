@@ -12,8 +12,6 @@
       "background_scripts/commands.js",
       "lib/clipboard.js",
       "background_scripts/settings.js",
-      "background_scripts/completion.js",
-      "background_scripts/marks.js",
       "background_scripts/main.js"
     ]
   },
