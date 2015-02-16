@@ -164,6 +164,7 @@ LinkHints =
   # Handles shift and esc keys. The other keys are passed to markerMatcher.matchHintsByKey.
   #
   onKeyDownInMode: (hintMarkers, event) ->
+    console.log("key pressed! " + event);
     return if @delayMode
 
     if (event.keyCode == keyCodes.shiftKey && @mode != COPY_LINK_URL)

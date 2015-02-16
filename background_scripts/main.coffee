@@ -2,8 +2,6 @@ root = exports ? window
 
 currentVersion = Utils.getCurrentVersion()
 
-tabQueue = {} # windowId -> Array
-tabInfoMap = {} # tabId -> object with various tab properties
 keyQueue = "" # Queue of keys typed
 validFirstKeys = {}
 singleKeyCommands = []
@@ -18,15 +16,6 @@ namedKeyRegex = /^(<(?:[amc]-.|(?:[amc]-)?[a-z0-9]{2,5})>)(.*)$/
 chrome.commands.onCommand.addListener (command) ->
   chrome.extension.onConnect.addListener((port, name) ->
     senderTabId = if port.sender.tab then port.sender.tab.id else null
-    # If this is a tab we've been waiting to open, execute any "tab loaded" handlers, e.g. to restore
-    # the tab's scroll position. Wait until domReady before doing this; otherwise operations like restoring
-    # the scroll position will not be possible.
-    if (port.name == "domReady" && senderTabId != null)
-      if (tabLoadedHandlers[senderTabId])
-        toCall = tabLoadedHandlers[senderTabId]
-        # Delete first to be sure there's no circular events.
-        delete tabLoadedHandlers[senderTabId]
-        toCall.call()
   
     if (portHandlers[port.name])
       port.onMessage.addListener(portHandlers[port.name])
@@ -62,14 +51,6 @@ chrome.commands.onCommand.addListener (command) ->
       regexp = new RegExp("^" + url.replace(/\*/g, ".*") + "$")
       isEnabled = false if request.url.match(regexp)
     { isEnabledForUrl: isEnabled }
-  
-  #
-  # Returns the keys that can complete a valid command given the current key queue.
-  #
-  getCompletionKeysRequest = (request, keysToCheck = "") ->
-    name: "refreshCompletionKeys"
-    completionKeys: generateCompletionKeys(keysToCheck)
-    validFirstKeys: validFirstKeys
   
   #
   # Opens the url in the current tab.
@@ -156,20 +137,6 @@ chrome.commands.onCommand.addListener (command) ->
         selectionChangedHandlers.push(callback)
         chrome.tabs.update(toSelect.id, { selected: true })))
   
-  updateOpenTabs = (tab) ->
-    # Chrome might reuse the tab ID of a recently removed tab.
-    if tabInfoMap[tab.id]?.deletor
-      clearTimeout tabInfoMap[tab.id].deletor
-    tabInfoMap[tab.id] =
-      url: tab.url
-      positionIndex: tab.index
-      windowId: tab.windowId
-      scrollX: null
-      scrollY: null
-      deletor: null
-    # Frames are recreated on refresh
-    delete framesForTab[tab.id]
-  
   # Updates the browserAction icon to indicated whether Vimium is enabled or disabled on the current page.
   # Also disables Vimium if it is currently enabled but should be disabled according to the url blacklist.
   # This lets you disable Vimium on a page without needing to reload.
@@ -197,73 +164,6 @@ chrome.commands.onCommand.addListener (command) ->
         else
           chrome.browserAction.setIcon({ path: disabledIcon })))
   
-  handleUpdateScrollPosition = (request, sender) ->
-    updateScrollPosition(sender.tab, request.scrollX, request.scrollY)
-  
-  updateScrollPosition = (tab, scrollX, scrollY) ->
-    tabInfoMap[tab.id].scrollX = scrollX
-    tabInfoMap[tab.id].scrollY = scrollY
-  
-  #chrome.tabs.onUpdated.addListener (tabId, changeInfo, tab) ->
-  onUpdatedListener = (tabId, changeInfo, tab) ->
-    return unless changeInfo.status == "loading" # only do this once per URL change
-    chrome.tabs.insertCSS tabId,
-      allFrames: true
-      code: Settings.get("userDefinedLinkHintCss")
-      runAt: "document_start"
-    updateOpenTabs(tab)
-    updateActiveState(tabId)
-  
-  #chrome.tabs.onAttached.addListener (tabId, attachedInfo) ->
-  onAttachedListener = (tabId, attachedInfo) ->
-    # We should update all the tabs in the old window and the new window.
-    if tabInfoMap[tabId]
-      updatePositionsAndWindowsForAllTabsInWindow(tabInfoMap[tabId].windowId)
-    updatePositionsAndWindowsForAllTabsInWindow(attachedInfo.newWindowId)
-  
-  #chrome.tabs.onMoved.addListener (tabId, moveInfo) ->
-  onMovedListener = (tabId, moveInfo) ->
-    updatePositionsAndWindowsForAllTabsInWindow(moveInfo.windowId)
-  
-  #chrome.tabs.onRemoved.addListener (tabId) ->
-  onRemovedListener = (tabId) ->
-    openTabInfo = tabInfoMap[tabId]
-    updatePositionsAndWindowsForAllTabsInWindow(openTabInfo.windowId)
-  
-    # If we restore pages that content scripts can't run on, they'll ignore Vimium keystrokes when they
-    # reappear. Pretend they never existed and adjust tab indices accordingly. Could possibly expand this into
-    # a blacklist in the future.
-    if (/^(chrome|view-source:)[^:]*:\/\/.*/.test(openTabInfo.url))
-      for i of tabQueue[openTabInfo.windowId]
-        if (tabQueue[openTabInfo.windowId][i].positionIndex > openTabInfo.positionIndex)
-          tabQueue[openTabInfo.windowId][i].positionIndex--
-      return
-  
-    if (tabQueue[openTabInfo.windowId])
-      tabQueue[openTabInfo.windowId].push(openTabInfo)
-    else
-      tabQueue[openTabInfo.windowId] = [openTabInfo]
-  
-    # keep the reference around for a while to wait for the last messages from the closed tab (e.g. for updating
-    # scroll position)
-    tabInfoMap.deletor = -> delete tabInfoMap[tabId]
-    setTimeout tabInfoMap.deletor, 1000
-    delete framesForTab[tabId]
-  
-  #chrome.tabs.onActiveChanged.addListener (tabId, selectInfo) -> updateActiveState(tabId)
-  
-  #chrome.windows.onRemoved.addListener (windowId) -> delete tabQueue[windowId]
-  
-  # End action functions
-  
-  updatePositionsAndWindowsForAllTabsInWindow = (windowId) ->
-    chrome.tabs.getAllInWindow(windowId, (tabs) ->
-      for tab in tabs
-        openTabInfo = tabInfoMap[tab.id]
-        if (openTabInfo)
-          openTabInfo.positionIndex = tab.index
-          openTabInfo.windowId = tab.windowId)
-  
   splitKeyIntoFirstAndSecond = (key) ->
     if (key.search(namedKeyRegex) == 0)
       { first: RegExp.$1, second: RegExp.$2 }
@@ -286,22 +186,6 @@ chrome.commands.onCommand.addListener (command) ->
       if (getActualKeyStrokeLength(key) == 1)
         singleKeyCommands.push(key)
   
-  # Generates a list of keys that can complete a valid command given the current key queue or the one passed in
-  generateCompletionKeys = (keysToCheck) ->
-    splitHash = splitKeyQueue(keysToCheck || keyQueue)
-    command = splitHash.command
-    count = splitHash.count
-  
-    completionKeys = singleKeyCommands.slice(0)
-  
-    if (getActualKeyStrokeLength(command) == 1)
-      for key of Commands.keyToCommandRegistry
-        splitKey = splitKeyIntoFirstAndSecond(key)
-        if (splitKey.first == command)
-          completionKeys.push(splitKey.second)
-  
-    completionKeys
-  
   splitKeyQueue = (queue) ->
     match = /([1-9][0-9]*)?(.*)/.exec(queue)
     count = parseInt(match[1], 10)
@@ -320,7 +204,6 @@ chrome.commands.onCommand.addListener (command) ->
       console.log("new KeyQueue: " + keyQueue)
   
   checkKeyQueue = (keysToCheck, tabId, frameId) ->
-    refreshedCompletionKeys = false
     splitHash = splitKeyQueue(keysToCheck)
     command = splitHash.command
     count = splitHash.count
@@ -337,9 +220,7 @@ chrome.commands.onCommand.addListener (command) ->
           command: registryEntry.command,
           frameId: frameId,
           count: count,
-          passCountToFunction: registryEntry.passCountToFunction,
-          completionKeys: generateCompletionKeys(""))
-        refreshedCompletionKeys = true
+          passCountToFunction: registryEntry.passCountToFunction)
       else
         if registryEntry.passCountToFunction
           BackgroundCommands[registryEntry.command](count)
@@ -359,11 +240,6 @@ chrome.commands.onCommand.addListener (command) ->
         newKeyQueue = (if validFirstKeys[splitKey.second] then splitKey.second else "")
     else
       newKeyQueue = (if validFirstKeys[command] then count.toString() + command else "")
-  
-    # If we haven't sent the completion keys piggybacked on executePageCommand,
-    # send them by themselves.
-    unless refreshedCompletionKeys
-      chrome.tabs.sendRequest(tabId, getCompletionKeysRequest(null, newKeyQueue), null)
   
     newKeyQueue
   
@@ -386,7 +262,6 @@ chrome.commands.onCommand.addListener (command) ->
     filterCompleter: filterCompleter
   
   sendRequestHandlers =
-    getCompletionKeys: getCompletionKeysRequest,
     getCurrentTabUrl: getCurrentTabUrl,
     openUrlInNewTab: openUrlInNewTab,
     openUrlInIncognito: openUrlInIncognito,
@@ -415,11 +290,6 @@ chrome.commands.onCommand.addListener (command) ->
   chrome.tabs.insertCSS(null, { file: "content_scripts/vimium.css" })
 
   chrome.tabs.onActiveChanged.addListener (tabId, selectInfo) -> updateActiveState(tabId)
-  chrome.windows.onRemoved.addListener (windowId) -> delete tabQueue[windowId]
-  chrome.tabs.onUpdated.addListener (onUpdatedListener)
-  chrome.tabs.onAttached.addListener (onAttachedListener)
-  chrome.tabs.onMoved.addListener (onMovedListener)
-  chrome.tabs.onRemoved.addListener (onRemovedListener)
 
   mode = if command == 'activate-link-hints-new-tab' then 'activateModeToOpenInNewTab' else 'activateMode'
   # TODO: Change this to a message to the content scripts

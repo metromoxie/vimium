@@ -6,12 +6,6 @@
 #
 window.handlerStack = new HandlerStack
 
-insertModeLock = null
-findMode = false
-findModeQuery = { rawQuery: "" }
-findModeQueryHasResults = false
-findModeAnchorNode = null
-isShowingHelpDialog = false
 keyPort = null
 # Users can disable Vimium on URL patterns via the settings page.
 isEnabledForUrl = true
@@ -27,9 +21,7 @@ settings =
   port: null
   values: {}
   loadedValues: 0
-  valuesToLoad: ["scrollStepSize", "linkHintCharacters", "linkHintNumbers", "filterLinkHints", "hideHud",
-    "previousPatterns", "nextPatterns", "findModeRawQuery", "regexFindMode", "userDefinedLinkHintCss",
-    "helpDialog_showAdvancedCommands"]
+  valuesToLoad: ["linkHintCharacters", "linkHintNumbers", "filterLinkHints", "userDefinedLinkHintCss"]
   isLoaded: false
   eventListeners: {}
 
@@ -80,8 +72,6 @@ hasModifiersRegex = /^<([amc]-)+.>/
 initializePreDomReady = ->
   settings.addEventListener("load", LinkHints.init.bind(LinkHints))
   settings.load()
-
-  Scroller.init()
 
   checkIfEnabledForUrl()
 
