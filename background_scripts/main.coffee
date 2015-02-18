@@ -291,6 +291,7 @@ onCommand = (command) ->
 
                 mode = if command == 'activate-link-hints-new-tab' then 'activateModeToOpenInNewTab' else 'activateMode'
                 # TODO: Change this to a message to the content scripts
+                chrome.browserAction.setIcon({ path: 'icons/browser_action_enabled.png' })
                 chrome.tabs.executeScript({ code: "root.LinkHints.init(); root.LinkHints." + mode + "(); console.log('activated!');" })
                 )))))))
 
