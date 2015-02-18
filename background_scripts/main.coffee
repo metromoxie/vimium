@@ -13,7 +13,7 @@ framesForTab = {}
 # the string.
 namedKeyRegex = /^(<(?:[amc]-.|(?:[amc]-)?[a-z0-9]{2,5})>)(.*)$/
 
-chrome.commands.onCommand.addListener (command) ->
+onCommand = (command) ->
   chrome.extension.onConnect.addListener((port, name) ->
     senderTabId = if port.sender.tab then port.sender.tab.id else null
   
@@ -279,18 +279,22 @@ chrome.commands.onCommand.addListener (command) ->
   #
   Commands.clearKeyMappingsAndSetDefaults()
   
-  chrome.tabs.executeScript(null, { file: "lib/utils.js" })
-  chrome.tabs.executeScript(null, { file: "lib/keyboard_utils.js" })
-  chrome.tabs.executeScript(null, { file: "lib/dom_utils.js" })
-  chrome.tabs.executeScript(null, { file: "lib/handler_stack.js" })
-  chrome.tabs.executeScript(null, { file: "lib/clipboard.js" })
-  chrome.tabs.executeScript(null, { file: "content_scripts/link_hints.js" })
-  chrome.tabs.executeScript(null, { file: "content_scripts/scroller.js" })
-  chrome.tabs.executeScript(null, { file: "content_scripts/vimium_frontend.js" })
-  chrome.tabs.insertCSS(null, { file: "content_scripts/vimium.css" })
+  chrome.tabs.executeScript(null, { file: "lib/utils.js" }, () ->
+    chrome.tabs.executeScript(null, { file: "lib/keyboard_utils.js" }, () ->
+      chrome.tabs.executeScript(null, { file: "lib/dom_utils.js" }, () ->
+        chrome.tabs.executeScript(null, { file: "lib/handler_stack.js" }, () ->
+        #chrome.tabs.executeScript(null, { file: "lib/clipboard.js" }, () ->
+          chrome.tabs.executeScript(null, { file: "content_scripts/link_hints.js" }, () ->
+          #chrome.tabs.executeScript(null, { file: "content_scripts/scroller.js" }, () ->
+            chrome.tabs.executeScript(null, { file: "content_scripts/vimium_frontend.js" }, () ->
+              chrome.tabs.insertCSS(null, { file: "content_scripts/vimium.css" }, () ->
 
-  chrome.tabs.onActiveChanged.addListener (tabId, selectInfo) -> updateActiveState(tabId)
+                chrome.tabs.onActiveChanged.addListener (tabId, selectInfo) -> updateActiveState(tabId)
 
-  mode = if command == 'activate-link-hints-new-tab' then 'activateModeToOpenInNewTab' else 'activateMode'
-  # TODO: Change this to a message to the content scripts
-  chrome.tabs.executeScript({ code: "root.LinkHints.init(); root.LinkHints." + mode + "(); console.log('activated!');" })
+                mode = if command == 'activate-link-hints-new-tab' then 'activateModeToOpenInNewTab' else 'activateMode'
+                # TODO: Change this to a message to the content scripts
+                chrome.tabs.executeScript({ code: "root.LinkHints.init(); root.LinkHints." + mode + "(); console.log('activated!');" })
+                )))))))
+
+chrome.commands.onCommand.addListener (onCommand)
+chrome.browserAction.onClicked.addListener (onCommand)

@@ -20,6 +20,9 @@
     "clipboardRead",
     "activeTab"
   ],
+  "browser_action": {
+    "default_icon": "icons/browser_action_disabled.png"
+  },
   "commands": {
     "activate-link-hints": {
       "suggested_key": {

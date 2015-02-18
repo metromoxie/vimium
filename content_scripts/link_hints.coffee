@@ -32,7 +32,8 @@ LinkHints =
   # To be called after linkHints has been generated from linkHintsBase.
   #
   init: ->
-    @markerMatcher = if settings.get("filterLinkHints") then filterHints else alphabetHints
+    @markerMatcher = alphabetHints
+    #@markerMatcher = if settings.get("filterLinkHints") then filterHints else alphabetHints
 
   #
   # Generate an XPath describing what a clickable element is.
@@ -493,3 +494,5 @@ numberToHintString = (number, characterSet, numHintDigits = 0) ->
 
 root = exports ? window
 root.LinkHints = LinkHints
+window.root = root;
+console.log('root = ' + root)
