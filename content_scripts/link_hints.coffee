@@ -495,4 +495,3 @@ numberToHintString = (number, characterSet, numHintDigits = 0) ->
 root = exports ? window
 root.LinkHints = LinkHints
 window.root = root;
-console.log('root = ' + root)

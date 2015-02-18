@@ -6,6 +6,12 @@
 #
 window.handlerStack = new HandlerStack
 
+insertModeLock = null
+findMode = false
+findModeQuery = { rawQuery: "" }
+findModeQueryHasResults = false
+findModeAnchorNode = null
+isShowingHelpDialog = false
 keyPort = null
 # Users can disable Vimium on URL patterns via the settings page.
 isEnabledForUrl = true
